@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AutoOil Finder</title>
+  <style>
+    body { background-color: #020617; color: #f8fafc; font-family: sans-serif; margin: 0; padding-bottom: 50px; }
+    header { background-color: #0f172a; border-bottom: 1px solid #1e293b; padding: 16px; position: sticky; top: 0; z-index: 50; }
+    .max-w { max-width: 440px; margin: 0 auto; }
+    .card { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }
+    input { text-transform: uppercase; font-family: monospace; font-size: 20px; font-weight: bold; background: transparent; border: none; outline: none; width: 100%; text-align: center; color: #0f172a; letter-spacing: 0.1em; padding: 10px; }
+    button { background-color: #f59e0b; color: #020617; font-weight: bold; border: none; border-radius: 12px; padding: 0 20px; font-size: 20px; cursor: pointer; }
+    button:active { transform: scale(0.95); }
+    .loader { background-color: #0f172a; border: 1px solid rgba(245, 158, 11, 0.4); color: #fde047; padding: 16px; border-radius: 16px; font-size: 14px; text-align: center; margin-bottom: 16px; }
+    .badge { background-color: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 9999px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="max-w" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1 style="font-size: 18px; font-weight: bold; color: #fbbf24; margin: 0;">AutoOil Finder 🚗</h1>
+        <p style="font-size: 10px; color: #94a3b8; margin: 0;">Dati tecnici e litri olio da targa</p>
+      </div>
+      <span style="font-size: 10px; background-color: #022c22; color: #6ee7b7; border: 1px solid #047857; padding: 2px 8px; border-radius: 9999px;">
+        Cloud Online
+      </span>
+    </div>
+  </header>
+
+  <main class="max-w" style="padding: 16px;">
+
+    <!-- Box Ricerca Targa -->
+    <div class="card">
+      <label style="display: block; font-size: 11px; font-weight: bold; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase;">
+        Inserisci la targa del veicolo
+      </label>
+      
+      <div style="display: flex; gap: 8px;">
+        <div style="display: flex; align-items: stretch; border: 2px solid #64748b; border-radius: 12px; overflow: hidden; background: white; flex: 1;">
+          <div style="background-color: #1d4ed8; color: white; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 4px 8px;">
+            <span style="font-size: 8px; color: #fde047;">★</span>
+            <span style="font-weight: bold; font-size: 12px;">I</span>
+          </div>
+          <input id="plateInput" type="text" maxlength="7" placeholder="AB123CD" />
+          <div style="background-color: #1d4ed8; width: 8px;"></div>
+        </div>
+
+        <button onclick="cercaTarga()">🔍</button>
+      </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader" style="display: none;">
+      ⏳ Interrogazione server e manuali in corso (attendi 4-5 secondi)...
+    </div>
+
+    <!-- Risultati -->
+    <div id="resultArea" style="display: none;">
+      <div class="card">
+        <h2 id="resTitle" style="font-size: 16px; font-weight: bold; color: white; margin: 0 0 4px 0;"></h2>
+        <p id="resSubtitle" style="font-size: 12px; color: #fbbf24; margin: 0;"></p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1e293b; font-size: 12px;">
+          <div>
+            <span style="color: #64748b; font-size: 10px; display: block; text-transform: uppercase;">Potenza</span>
+            <strong id="resPower" style="color: #f1f5f9;"></strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-size: 10px; display: block; text-transform: uppercase;">Anni</span>
+            <strong id="resYears" style="color: #f1f5f9;"></strong>
+          </div>
+        </div>
+      </div>
+
+      <div id="componentsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+
+  </main>
+
+  <script>
+    const API_URL = 'https://targhe-oil-api.onrender.com'; 
+
+    async function cercaTarga() {
+      const plate = document.getElementById('plateInput').value.trim().toUpperCase();
+      if (plate.length < 7) {
+        alert('Inserisci una targa valida a 7 caratteri.');
+        return;
+      }
+
+      const loader = document.getElementById('loader');
+      const resultArea = document.getElementById('resultArea');
+      loader.style.display = 'block';
+      resultArea.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_URL}/api/targa/${plate}`);
+        const json = await res.json();
+        loader.style.display = 'none';
+
+        if (!res.ok || json.error) {
+          alert(json.error || 'Veicolo non trovato.');
+          return;
+        }
+
+        const d = json.data;
+        document.getElementById('resTitle').textContent = d.modelTitle;
+        document.getElementById('resSubtitle').textContent = d.modelSubtitle;
+        document.getElementById('resPower').textContent = d.power;
+        document.getElementById('resYears').textContent = d.years;
+
+        const list = document.getElementById('componentsList');
+        list.innerHTML = '';
+
+        if (d.components && d.components.length > 0) {
+          d.components.forEach(comp => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.marginBottom = '0';
+            
+            const viscBadges = (comp.viscosities || [])
+              .map(v => `<span class="badge">${v}</span>`)
+              .join(' ');
+
+            const capList = (comp.capacities || [])
+              .map(c => `<li style="color: #34d399; font-weight: 600; font-size: 12px; margin-bottom: 4px;">💧 ${c}</li>`)
+              .join('');
+
+            const intList = (comp.intervals || [])
+              .map(i => `<li style="color: #cbd5e1; font-size: 12px; margin-bottom: 4px;">⏱️ ${i}</li>`)
+              .join('');
+
+            card.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; border-bottom: 1px solid #1e293b; padding-bottom: 8px; margin-bottom: 8px;">
+                <h3 style="font-weight: bold; color: white; font-size: 14px; margin: 0;">${comp.name}</h3>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">${viscBadges}</div>
+              </div>
+              <ul style="margin: 0; padding-left: 16px; list-style-type: none;">
+                ${capList || '<li style="color: #94a3b8; font-size: 12px;">Vedi specifiche sotto</li>'}
+                ${intList}
+              </ul>
+              <div style="font-size: 11px; color: #94a3b8; background-color: #020617; padding: 10px; border-radius: 8px; font-family: monospace; margin-top: 8px; line-height: 1.4;">
+                ${(comp.specs || []).slice(0, 5).join('<br>')}
+              </div>
+            `;
+            list.appendChild(card);
+          });
+        }
+
+        resultArea.style.display = 'block';
+
+      } catch (err) {
+        loader.style.display = 'none';
+        alert('Errore di connessione al server cloud. Riprova tra qualche istante.');
+      }
+    }
+  </script>
+</body>
+</html>
